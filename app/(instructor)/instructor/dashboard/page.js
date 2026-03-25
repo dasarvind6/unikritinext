@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Card, Spinner, Alert, ListGroup, Table } from 'react-bootstrap';
 import Link from 'next/link';
+import { useSelector } from 'react-redux';
+import { useGetAdminClassSessionsQuery } from '@/redux/api/apiSlice';
+import { FaChalkboardTeacher, FaCalendarDay, FaArrowRight } from 'react-icons/fa';
 
 export default function InstructorDashboard() {
   const [stats, setStats] = useState(null);
@@ -22,6 +24,13 @@ export default function InstructorDashboard() {
       setLoading(false);
     }
   };
+
+  const { user } = useSelector((state) => state.auth);
+  const today = new Date().toISOString().split('T')[0];
+  const { data: sessionsData, isLoading: isLoadingSessions } = useGetAdminClassSessionsQuery({ 
+    teacherId: user?.id, 
+    classDate: today 
+  }, { skip: !user?.id });
 
   useEffect(() => {
     fetchStats();
@@ -106,9 +115,41 @@ export default function InstructorDashboard() {
                         <tr><td colSpan="4" className="text-center py-4 text-muted">No courses yet.</td></tr>
                      )}
                   </tbody>
-               </Table>
+                </Table>
             </Card.Body>
           </Card>
+
+          <h5 className="fw-bold mb-3 d-flex align-items-center gap-2 mt-4">
+             <FaCalendarDay className="text-primary" /> Today's Classes
+          </h5>
+          <Row className="g-3">
+             {isLoadingSessions ? (
+               <Col xs={12} className="text-center py-4"><Spinner size="sm" /></Col>
+             ) : sessionsData?.sessions?.length > 0 ? (
+               sessionsData.sessions.map(session => (
+                 <Col md={6} key={session._id}>
+                   <Card className="border-0 shadow-sm classroom-session-card h-100">
+                     <Card.Body>
+                       <div className="d-flex justify-content-between mb-2">
+                         <Badge bg="primary">{session.batchId?.batchName}</Badge>
+                         <small className="text-muted fw-bold">{session.classDate ? new Date(session.classDate).toLocaleDateString() : ''}</small>
+                       </div>
+                       <h6 className="fw-bold mb-3">{session.batchId?.instrument} - {session.batchId?.level}</h6>
+                       <Link href={`/instructor/classroom/${session._id}`} passHref>
+                         <Button variant="outline-primary" size="sm" className="w-100 d-flex align-items-center justify-content-center gap-2 rounded-pill">
+                           <FaChalkboardTeacher /> Classroom Guide <FaArrowRight size={10} />
+                         </Button>
+                       </Link>
+                     </Card.Body>
+                   </Card>
+                 </Col>
+               ))
+             ) : (
+               <Col xs={12}>
+                 <Alert variant="info" className="border-0 shadow-sm">No classes scheduled for today.</Alert>
+               </Col>
+             )}
+          </Row>
         </Col>
 
         <Col lg={4}>
@@ -129,14 +170,27 @@ export default function InstructorDashboard() {
                     <i className="bi bi-bar-chart me-3 fs-5 text-warning"></i>
                     <span className="fw-semibold">Detailed Analytics</span>
                  </ListGroup.Item>
-                 <ListGroup.Item action as={Link} href="/instructor/courses" className="py-3 px-4 d-flex align-items-center border-bottom-0 rounded-bottom">
+                 <ListGroup.Item action as={Link} href="/instructor/courses" className="py-3 px-4 d-flex align-items-center">
                     <i className="bi bi-book me-3 fs-5 text-info"></i>
                     <span className="fw-semibold">Course Manager</span>
+                 </ListGroup.Item>
+                 <ListGroup.Item action as={Link} href="/instructor/attendance" className="py-3 px-4 d-flex align-items-center border-bottom-0 rounded-bottom">
+                    <FaCalendarDay className="me-3 fs-5 text-danger" />
+                    <span className="fw-semibold">Attendance Management</span>
                  </ListGroup.Item>
               </ListGroup>
            </Card>
         </Col>
       </Row>
+      <style jsx>{`
+        .classroom-session-card {
+          border-left: 4px solid var(--bs-primary) !important;
+          transition: transform 0.2s ease;
+        }
+        .classroom-session-card:hover {
+          transform: translateY(-5px);
+        }
+      `}</style>
     </Container>
   );
 }

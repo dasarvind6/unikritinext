@@ -1,14 +1,20 @@
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
 import { Spinner, Container } from 'react-bootstrap';
 
 export default function AdminIndexPage() {
   const router = useRouter();
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    router.replace('/admin/dashboard');
-  }, [router]);
+    if (user?.role === 'school_admin') {
+      router.replace('/school/dashboard');
+    } else {
+      router.replace('/admin/dashboard');
+    }
+  }, [router, user]);
 
   return (
     <Container className="py-5 text-center">

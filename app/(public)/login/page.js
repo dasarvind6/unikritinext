@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Tabs, Tab, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '@/redux/slices/authSlice';
 
 export default function LoginPage() {
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('student');
   
   // Student State
@@ -66,8 +69,16 @@ export default function LoginPage() {
     try {
       const res = await axios.post('/api/auth/login', { email, password });
       if (res.data.success) {
-        const role = res.data.data.role;
-        window.location.href = role === 'admin' ? '/admin' : '/instructor';
+        const userData = res.data.data;
+        dispatch(setCredentials(userData));
+        const role = userData.role;
+        if (role === 'admin') {
+          window.location.href = '/admin';
+        } else if (role === 'school_admin') {
+          window.location.href = '/school/dashboard';
+        } else {
+          window.location.href = '/instructor';
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Invalid credentials');
@@ -137,7 +148,7 @@ export default function LoginPage() {
                   )}
                 </Tab>
 
-                <Tab eventKey="instructor" title="Instructor / Admin">
+                <Tab eventKey="instructor" title="Staff Login">
                   <Form onSubmit={handleEmailLogin}>
                     <Form.Group className="mb-3">
                       <Form.Label>Email Address</Form.Label>

@@ -15,7 +15,7 @@ export async function GET(req, { params }) {
     await connectDB();
 
     // 1. Get instructor's courses
-    const courses = await Course.find({ instructor: id });
+    const courses = await Course.find({ course_creator: id });
     const courseIds = courses.map(c => c._id);
 
     // 2. Sum earnings from payments for these courses

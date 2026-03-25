@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
     const { id } = params;
     await connectDB();
 
-    const courses = await Course.find({ instructor: id }).sort({ createdAt: -1 });
+    const courses = await Course.find({ course_creator: id }).sort({ createdAt: -1 });
 
     return NextResponse.json({
       success: true,

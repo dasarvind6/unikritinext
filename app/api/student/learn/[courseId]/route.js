@@ -65,7 +65,7 @@ export async function GET(req, { params }) {
           title: course.title,
           description: course.description,
           thumbnail: course.thumbnail,
-          instructor: course.instructor,
+          course_creator: course.instructor,
           level: course.level,
           language: course.language,
         },

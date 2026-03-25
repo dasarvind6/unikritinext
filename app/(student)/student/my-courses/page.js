@@ -58,7 +58,9 @@ export default function MyCoursesPage() {
                     )}
                   </div>
                   <Card.Body className="d-flex flex-column">
-                    <div className="text-muted small mb-1">{course.category}</div>
+                    <div className="text-muted small mb-1">
+                      {course.category} {enrollment.packageId && <Badge bg="light" text="dark" className="ms-1 border">{enrollment.packageId.name}</Badge>}
+                    </div>
                     <Card.Title className="fw-bold text-truncate mb-3">{course.title}</Card.Title>
                     
                     <div className="mt-auto">

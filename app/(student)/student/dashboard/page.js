@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Container, Row, Col, Card, ProgressBar, Spinner, Alert, ListGroup, Badge } from 'react-bootstrap';
 import Link from 'next/link';
+import { useGetStudentLmsProgressQuery } from '@/redux/api/apiSlice';
+import { FaGraduationCap, FaCheckCircle, FaClock } from 'react-icons/fa';
 
 export default function StudentDashboard() {
   const [enrollments, setEnrollments] = useState([]);
@@ -22,6 +23,8 @@ export default function StudentDashboard() {
       setLoading(false);
     }
   };
+
+  const { data: batchProgressData, isLoading: isLoadingBatchProgress } = useGetStudentLmsProgressQuery();
 
   useEffect(() => {
     fetchEnrollments();
@@ -64,6 +67,38 @@ export default function StudentDashboard() {
           </Card>
         </Col>
       </Row>
+
+      {/* NEW: Batch Course Progress */}
+      {batchProgressData?.success && batchProgressData.courseTitle && (
+        <Card className="border-0 shadow-sm mb-5 overflow-hidden border">
+          <Row className="g-0">
+            <Col md={4} className="bg-primary bg-opacity-10 d-flex align-items-center justify-content-center p-4 text-center">
+              <div>
+                 <FaGraduationCap size={48} className="text-primary mb-2" />
+                 <div className="fw-bold text-dark small">{batchProgressData.batchName}</div>
+                 <Badge bg="primary" pill className="extra-small">Active Batch</Badge>
+              </div>
+            </Col>
+            <Col md={8}>
+              <Card.Body className="p-4">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                   <h6 className="fw-bold mb-0">My Course: {batchProgressData.courseTitle}</h6>
+                   <Badge bg="success" pill className="px-3 small">{batchProgressData.progressPercentage}%</Badge>
+                </div>
+                <ProgressBar now={batchProgressData.progressPercentage} variant="success" className="mb-3" style={{ height: '8px' }} />
+                <div className="d-flex gap-4 extra-small text-muted">
+                   <div className="d-flex align-items-center gap-1">
+                      <FaCheckCircle className="text-success" /> {batchProgressData.completedLessonsCount} Lessons Done
+                   </div>
+                   <div className="d-flex align-items-center gap-1">
+                      <FaClock className="text-warning" /> {batchProgressData.totalLessons - batchProgressData.completedLessonsCount} Left
+                   </div>
+                </div>
+              </Card.Body>
+            </Col>
+          </Row>
+        </Card>
+      )}
 
       <Row>
         <Col lg={8}>

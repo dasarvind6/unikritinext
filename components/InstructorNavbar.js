@@ -3,16 +3,21 @@ import { Navbar, Container, Nav, Button, Dropdown } from 'react-bootstrap';
 import { useRouter } from 'next/navigation';
 import { useAdminLogoutMutation } from '@/redux/api/apiSlice';
 import { FiLogOut, FiUser, FiBell, FiMenu } from 'react-icons/fi';
+import { useDispatch } from 'react-redux';
+import { logout as logoutAction } from '@/redux/slices/authSlice';
 
 export default function InstructorNavbar({ onToggleSidebar }) {
   const router = useRouter();
   const [logout] = useAdminLogoutMutation();
+  const dispatch = useDispatch();
 
   const handleLogout = async () => {
     try {
       await logout().unwrap();
+      dispatch(logoutAction());
     } catch (error) {
       console.error('Logout failed:', error);
+      dispatch(logoutAction());
     } finally {
       // Force redirect to login anyway to clear state for verification
       router.push('/login');

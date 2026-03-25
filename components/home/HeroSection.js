@@ -26,7 +26,7 @@ const HeroSection = ({ settings, isLoading }) => {
   };
 
   return (
-    <section className="u-hero py-5 u-hero-frame">
+    <section className="u-hero py-5 u-hero-frame  bg-dark">
       <div className="u-divider" />
       <div className="container-fluid px-0">
         <div className="u-hero-grid">

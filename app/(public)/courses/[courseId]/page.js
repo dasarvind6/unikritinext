@@ -1,121 +1,270 @@
-'use client';
+import connectDB from '@/lib/db';
+import Course from '@/models/Course';
+import Section from '@/models/Section';
+import Lesson from '@/models/Lesson';
+import Category from '@/models/Category';
+import mongoose from 'mongoose';
+import { notFound } from 'next/navigation';
+import { FaQuestionCircle, FaGraduationCap, FaClock, FaDesktop, FaMapMarkerAlt } from 'react-icons/fa';
 
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Container, Row, Col, Card, Button, Spinner, Alert, Accordion, ListGroup, Badge } from 'react-bootstrap';
-import { useParams } from 'next/navigation';
+import PackageSelector from '@/components/PackageSelector';
 
-export default function PublicCourseDetailPage() {
-    const params = useParams();
-    const courseId = params.courseId;
+async function getCourse(courseId) {
+    await connectDB();
 
-    const [course, setCourse] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    let course;
+    if (mongoose.Types.ObjectId.isValid(courseId)) {
+        course = await Course.findById(courseId);
+    }
 
-    const fetchCourse = async () => {
-        try {
-            const res = await axios.get(`/api/courses/${courseId}`);
-            if (res.data.success) {
-                setCourse(res.data.data);
-            }
-        } catch (err) {
-            setError('Failed to load course details.');
-        } finally {
-            setLoading(false);
+    if (!course) {
+        course = await Course.findOne({ slug: courseId });
+    }
+
+    if (!course) return null;
+
+    // Populate necessary fields
+    await course.populate('course_creator', 'name avatar email');
+    await course.populate('instrument_id', 'name');
+    await course.populate('level_id', 'levelName');
+    await course.populate('categoryIds');
+
+    // Fetch packages for this course
+    const packagesData = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/packages?course_id=${course._id}`, { cache: 'no-store' });
+    const packages = await packagesData.json();
+
+    // Fetch sections and lessons
+    const sections = await Section.find({ courseId: course._id }).sort({ order: 1 }).lean();
+    for (const section of sections) {
+        section.lessons = await Lesson.find({ sectionId: section._id }).sort({ order: 1 }).lean();
+    }
+
+    return { ...course.toObject(), sections, packages: packages.success ? packages.data : [] };
+}
+
+export async function generateMetadata({ params }) {
+    const course = await getCourse(params.courseId);
+    if (!course) return { title: 'Course Not Found' };
+
+    return {
+        title: course.metaTitle || `${course.title} | Unikriti`,
+        description: course.metaDescription || course.shortDescription || course.description.substring(0, 160),
+        keywords: course.metaKeywords || '',
+        openGraph: {
+            title: course.metaTitle || course.title,
+            description: course.metaDescription || course.shortDescription || course.description.substring(0, 160),
+            images: course.thumbnail ? [course.thumbnail] : [],
         }
     };
+}
 
-    useEffect(() => {
-        fetchCourse();
-    }, [courseId]);
+export default async function PublicCourseDetailPage({ params }) {
+    const course = await getCourse(params.courseId);
 
-    const handleEnroll = () => {
-        // Stub for next phase: payments / enrollments
-        alert('Enrollment system coming soon!');
-    };
+    if (!course) {
+        notFound();
+    }
 
-    if (loading) return <Container className="py-5 text-center"><Spinner animation="border" /></Container>;
-    if (error || !course) return <Container className="py-5"><Alert variant="danger">{error || 'Not found'}</Alert></Container>;
+    const primaryCategory = course.categoryIds?.[0]?.name || 'Course';
+    const instructorName = course.course_creator?.name || 'Instructor';
+
+    // Find the highest priced package for the sidebar
+    const maxPackagePrice = course.packages && course.packages.length > 0 
+        ? Math.max(...course.packages.map(p => p.price))
+        : course.price;
 
     return (
-        <div>
+        <div className=''>
             {/* Hero Section */}
-            <div className="bg-dark text-white py-5">
-                <Container>
-                    <Row className="align-items-center">
-                        <Col lg={8} className="mb-4 mb-lg-0">
-                            <Badge bg="primary" className="mb-3 px-3 py-2">{course.category}</Badge>
-                            <h1 className="fw-bold mb-3">{course.title}</h1>
-                            <p className="lead mb-4 opacity-75">{course.description}</p>
-                            <div className="d-flex align-items-center small opacity-75">
-                                <i className="bi bi-person-circle me-2 fs-5"></i>
-                                <span className="me-4 fs-6">Created by {course.instructor?.name || 'Instructor'}</span>
-                                <i className="bi bi-bar-chart-fill me-2 fs-5"></i>
-                                <span className="fs-6">{course.level}</span>
-                            </div>
-                        </Col>
-                        <Col lg={4}>
-                            <Card className="text-dark shadow-lg border-0">
-                                <div style={{ height: '220px', backgroundColor: '#e9ecef', overflow: 'hidden' }} className="rounded-top">
-                                    {course.thumbnail ? (
-                                        <img src={course.thumbnail} alt={course.title} className="w-100 h-100" style={{ objectFit: 'cover' }} />
-                                    ) : (
-                                        <div className="d-flex align-items-center justify-content-center h-100">Course Image</div>
-                                    )}
-                                </div>
-                                <Card.Body className="p-4 text-center">
-                                    <h2 className="fw-bold mb-3">
-                                        {course.price > 0 ? `$${course.price.toFixed(2)}` : 'Free'}
-                                    </h2>
-                                    <Button variant="success" size="lg" className="w-100 fw-bold py-3" onClick={handleEnroll}>
-                                        Enroll Now
-                                    </Button>
-                                    <p className="text-muted small mt-3 mb-0">30-Day Money-Back Guarantee</p>
-                                </Card.Body>
-                            </Card>
-                        </Col>
-                    </Row>
-                </Container>
-            </div>
+            <section className="u-course-hero">
+                <div className="container">
+                    <div className="u-breadcrumb">
+                        <a href="/">Home</a>
+                        <span>/</span>
+                        <a href="/courses">Courses</a>
+                        <span>/</span>
+                        <span>{primaryCategory}</span>
+                    </div>
+                    <div className="u-chip">🎸 {primaryCategory} Course</div>
+                    <h1 className="u-course-title">
+                        {course.title}
+                    </h1>
+                    <p className="u-course-sub">
+                        {course.shortDescription || course.description.substring(0, 200) + '...'}
+                    </p>
+                    <div className="u-top-meta">
+                        <span>{course.level_id?.levelName || course.level}</span>
+                        <span>{course.mode || 'Online'}</span>
+                        <span>{course.duration || 'Flexible'}</span>
+                        {course.certification && <span>Certification Available</span>}
+                    </div>
+                </div>
+            </section>
 
-            {/* Curriculum Section */}
-            <Container className="py-5 mb-5">
-                <Row>
-                    <Col lg={8}>
-                        <h3 className="fw-bold mb-4">Course Content</h3>
-                        {course.sections?.length > 0 ? (
-                            <Accordion defaultActiveKey="0">
-                                {course.sections.map((section, idx) => (
-                                    <Accordion.Item eventKey={idx.toString()} key={section._id} className="mb-2">
-                                        <Accordion.Header>
-                                            <div className="fw-bold">{section.title}</div>
-                                        </Accordion.Header>
-                                        <Accordion.Body className="p-0">
-                                            <ListGroup variant="flush">
-                                                {section.lessons?.map((lesson) => (
-                                                    <ListGroup.Item key={lesson._id} className="py-3 px-4 bg-light text-muted d-flex align-items-center">
-                                                        <i className="bi bi-play-circle me-3"></i>
-                                                        <span>{lesson.title}</span>
-                                                        <span className="ms-auto small">
-                                                            {lesson.videoUrl && <Badge bg="secondary">Video</Badge>}
-                                                        </span>
-                                                    </ListGroup.Item>
-                                                ))}
-                                                {!section.lessons?.length && (
-                                                    <ListGroup.Item className="py-3 px-4 text-muted small">No lessons available yet.</ListGroup.Item>
-                                                )}
-                                            </ListGroup>
-                                        </Accordion.Body>
-                                    </Accordion.Item>
-                                ))}
-                            </Accordion>
-                        ) : (
-                            <Alert variant="secondary">The curriculum for this course is being prepared.</Alert>
-                        )}
-                    </Col>
-                </Row>
-            </Container>
+            {/* Main Content */}
+            <section className="u-main">
+                <div className="container">
+                    <div className="row g-4">
+                        {/* LEFT CONTENT */}
+                        <div className="col-lg-8">
+                            {course.thumbnail ? (
+                                <img
+                                    className="u-feature-img"
+                                    src={course.thumbnail}
+                                    alt={course.title}
+                                />
+                            ) : (
+                                <div className="u-feature-img d-flex align-items-center justify-content-center bg-light text-muted">
+                                    No Course Image
+                                </div>
+                            )}
+
+                            {/* COURSE INFO CARDS */}
+                            <div className="row g-3 mt-1">
+                                <div className="col-md-6 col-xl-3">
+                                    <div className="u-info-card">
+                                        <div className="u-info-icon">⏳</div>
+                                        <h6>Duration</h6>
+                                        <p>{course.duration || 'Self-paced'}</p>
+                                    </div>
+                                </div>
+                                <div className="col-md-6 col-xl-3">
+                                    <div className="u-info-card">
+                                        <div className="u-info-icon">📍</div>
+                                        <h6>Mode</h6>
+                                        <p>{course.mode || 'Online'}</p>
+                                    </div>
+                                </div>
+                                <div className="col-md-6 col-xl-3">
+                                    <div className="u-info-card">
+                                        <div className="u-info-icon">🎓</div>
+                                        <h6>Level</h6>
+                                        <p>{course.level_id?.levelName || course.level}</p>
+                                    </div>
+                                </div>
+                                <div className="col-md-6 col-xl-3">
+                                    <div className="u-info-card">
+                                        <div className="u-info-icon">🏅</div>
+                                        <h6>Certification</h6>
+                                        <p>{course.certification ? 'Available' : 'No Certificate'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* OVERVIEW */}
+                            <div
+
+                                dangerouslySetInnerHTML={{ __html: course.description }}
+                            />
+
+                            {/* PACKAGE SELECTOR SECTION (Interactive) */}
+                            <div id="packages">
+                                <PackageSelector courseId={course._id.toString()} initialPackages={course.packages} />
+                            </div>
+
+
+
+                            {/* INSTRUCTOR */}
+                            <div className="u-card mt-4">
+                                <h2 className="u-sec-title">Meet Your Instructor</h2>
+                                <div className="u-instructor">
+                                    {course.course_creator?.avatar ? (
+                                        <img src={course.course_creator.avatar} alt={instructorName} />
+                                    ) : (
+                                        <div className="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white" style={{ width: '92px', height: '92px' }}>
+                                            {instructorName.charAt(0)}
+                                        </div>
+                                    )}
+                                    <div>
+                                        <h5>{instructorName}</h5>
+                                        <small>Instructor • {primaryCategory} Mentor</small>
+                                        <p className="u-text mb-0">
+                                            {course.course_creator?.bio || `Join ${instructorName} to master ${course.title} through a structured and encouraging learning path.`}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* FAQ SECTIONS (if any) */}
+                            {course.faq && course.faq.length > 0 && (
+                                <div className="u-card mt-4">
+                                    <h2 className="u-sec-title">Frequently Asked Questions</h2>
+                                    <div className="accordion u-faq" id="courseFaq">
+                                        {course.faq.map((item, idx) => (
+                                            <div className="accordion-item" key={idx}>
+                                                <h2 className="accordion-header">
+                                                    <button
+                                                        className={`accordion-button ${idx === 0 ? '' : 'collapsed'}`}
+                                                        type="button"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target={`#faq${idx}`}
+                                                    >
+                                                        {item.question}
+                                                    </button>
+                                                </h2>
+                                                <div
+                                                    id={`faq${idx}`}
+                                                    className={`accordion-collapse collapse ${idx === 0 ? 'show' : ''}`}
+                                                    data-bs-parent="#courseFaq"
+                                                >
+                                                    <div className="accordion-body">
+                                                        {item.answer}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* RIGHT SIDEBAR */}
+                        <div className="col-lg-4">
+                            <div className="u-side-sticky">
+                                <div className="u-price-card text-center p-4">
+                                    <div className="price">{maxPackagePrice > 0 ? `₹${maxPackagePrice.toLocaleString()}` : 'Free'}</div>
+                                    <div className="mini mb-3">
+                                        Starting price
+                                    </div>
+                                    <div className="d-grid mb-3">
+                                        <a href="#packages" className="u-btn-dark text-decoration-none">
+                                            Select Plan to Enroll
+                                        </a>
+                                    </div>
+                                    <div className="u-side-points text-start">
+                                        <div>✔ Live guided sessions</div>
+                                        <div>✔ Practice support</div>
+                                        <div>✔ {course.mode || 'Online'} sessions</div>
+                                        {course.certification && <div>✔ Certification included</div>}
+                                    </div>
+                                    <div className="d-grid mt-3">
+                                        <button className="u-btn-outline">
+                                            Download Brochure
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="u-card mt-4">
+                                    <h3 className="u-sec-title mb-3" style={{ fontSize: 24 }}>
+                                        Quick Details
+                                    </h3>
+                                    <p className="u-text mb-2">
+                                        <strong>Instrument:</strong> {course.instrument_id?.name || 'General'}
+                                    </p>
+                                    <p className="u-text mb-2">
+                                        <strong>Level:</strong> {course.level_id?.levelName || course.level}
+                                    </p>
+                                    <p className="u-text mb-2">
+                                        <strong>Language:</strong> {course.language || 'English'}
+                                    </p>
+                                    <p className="u-text mb-0">
+                                        <strong>Duration:</strong> {course.duration || 'Flexible'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }

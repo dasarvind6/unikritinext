@@ -1,13 +1,21 @@
 'use client';
 import { Container, Row, Col, Card, Spinner, Table, Badge } from 'react-bootstrap';
 import { useGetAdminDashboardStatsQuery } from '@/redux/api/apiSlice';
+import { useSelector } from 'react-redux';
 import { FiUsers, FiBook, FiDollarSign, FiActivity, FiArrowUpRight } from 'react-icons/fi';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
 } from 'recharts';
+import SchoolAdminDashboard from '@/components/admin/SchoolAdminDashboard';
 
 export default function AdminDashboardPage() {
+  const { user } = useSelector((state) => state.auth);
+  
+  if (user?.role === 'school_admin') {
+    return <SchoolAdminDashboard />;
+  }
+
   const { data, isLoading, isError } = useGetAdminDashboardStatsQuery();
 
   if (isLoading) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectDB from '@/lib/db';
 import Course from '@/models/Course';
 import Section from '@/models/Section';
@@ -8,7 +9,23 @@ import { getUserFromCookie } from '@/utils/auth';
 export async function GET(req, { params }) {
   try {
     await connectDB();
-    const course = await Course.findById(params.courseId).populate('instructor', 'name avatar');
+    const { courseId } = params;
+    
+    let course;
+    if (mongoose.Types.ObjectId.isValid(courseId)) {
+      course = await Course.findById(courseId);
+    }
+
+    if (!course) {
+      course = await Course.findOne({ slug: courseId });
+    }
+
+    if (course) {
+      course = await course.populate('course_creator', 'name avatar')
+      course = await course.populate('instrument_id', 'name')
+      course = await course.populate('level_id', 'levelName');
+    }
+    
     if (!course) return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
 
     // Fetch hierarchical sections and their corresponding lessons
@@ -35,7 +52,7 @@ export async function PUT(req, { params }) {
     if (!course) return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
     
     // Auth Check: Is this instructor the owner or an admin?
-    if (course.instructor.toString() !== user.id && user.role !== 'admin') {
+    if (course.course_creator?.toString() !== user.id && user.role !== 'admin') {
       return NextResponse.json({ success: false, error: 'Unauthorized to edit this course' }, { status: 403 });
     }
 
@@ -57,7 +74,7 @@ export async function DELETE(req, { params }) {
     const course = await Course.findById(params.courseId);
     if (!course) return NextResponse.json({ success: false, error: 'Course not found' }, { status: 404 });
 
-    if (course.instructor.toString() !== user.id && user.role !== 'admin') {
+    if (course.course_creator?.toString() !== user.id && user.role !== 'admin') {
       return NextResponse.json({ success: false, error: 'Unauthorized to delete this course' }, { status: 403 });
     }
 

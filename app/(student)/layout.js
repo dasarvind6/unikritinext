@@ -1,19 +1,25 @@
 'use client';
 import { Container, Row, Col, Nav } from 'react-bootstrap';
-import Link from 'next/link';
 import { FiBook, FiAward, FiSettings, FiLogOut } from 'react-icons/fi';
+import { useDispatch } from 'react-redux';
+import { logout as logoutAction } from '@/redux/slices/authSlice';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 
 export default function StudentLayout({ children }) {
   const router = useRouter();
 
+  const dispatch = useDispatch();
+
   const handleLogout = async () => {
     try {
       await axios.post('/api/auth/logout');
+      dispatch(logoutAction());
       router.push('/login');
     } catch (err) {
       console.error('Logout failed', err);
+      dispatch(logoutAction());
+      router.push('/login');
     }
   };
 

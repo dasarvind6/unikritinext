@@ -5,10 +5,13 @@ import { Container, Table, Spinner, Alert, Form, Button, Modal, Badge, Card, Row
 import { 
   useGetAdminInstructorsQuery, 
   useUpdateAdminUserMutation, 
+  useCreateAdminUserMutation,
   useGetInstructorStatsQuery,
-  useGetInstructorCoursesQuery
+  useGetInstructorCoursesQuery,
+  useGetAdminSchoolsQuery
 } from '@/redux/api/apiSlice';
-import { FaCheck, FaTimes, FaBan, FaEye, FaChartLine, FaCheckCircle } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaBan, FaEye, FaChartLine, FaCheckCircle, FaPlus, FaUserTie } from 'react-icons/fa';
+import { useSelector } from 'react-redux';
 
 export default function AdminInstructorsPage() {
   const [page, setPage] = useState(1);
@@ -21,7 +24,21 @@ export default function AdminInstructorsPage() {
   });
 
   const [updateUser, { isLoading: isUpdating }] = useUpdateAdminUserMutation();
+  const [createUser, { isLoading: isCreating }] = useCreateAdminUserMutation();
+  const { data: schoolData } = useGetAdminSchoolsQuery();
+  const schools = schoolData?.schools || [];
+  
+  const { user } = useSelector((state) => state.auth);
+  const isSchoolAdmin = user?.role === 'school_admin';
+  const schoolId = user?.schoolId || user?._id;
+
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Creation Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '', email: '', phone: '', password: '', role: 'instructor', schoolId: ''
+  });
 
   // Stats Modal State
   const [showStatsModal, setShowStatsModal] = useState(false);
@@ -48,6 +65,26 @@ export default function AdminInstructorsPage() {
     setShowStatsModal(true);
   };
 
+  const handleOpenCreateModal = () => {
+    setFormData({
+      name: '', email: '', phone: '', password: '', role: 'instructor', 
+      schoolId: isSchoolAdmin ? schoolId : ''
+    });
+    setShowCreateModal(true);
+  };
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await createUser(formData).unwrap();
+      setSuccessMsg('Instructor created successfully!');
+      setShowCreateModal(false);
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      alert(err?.data?.error || 'Failed to create instructor.');
+    }
+  };
+
   if (isLoading) {
     return (
       <Container className="py-5 text-center">
@@ -62,7 +99,14 @@ export default function AdminInstructorsPage() {
 
   return (
     <Container className="py-5">
-      <h2 className="fw-bold mb-4">Instructor Management</h2>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="fw-bold mb-0">Instructor Management</h2>
+        {(user?.role === 'admin' || isSchoolAdmin) && (
+          <Button variant="primary" className="d-flex align-items-center gap-2 px-4 shadow-sm" onClick={handleOpenCreateModal}>
+            <FaPlus /> Add New Instructor
+          </Button>
+        )}
+      </div>
 
       {/* Filters and Search */}
       <div className="bg-white p-3 rounded shadow-sm mb-4">
@@ -154,6 +198,72 @@ export default function AdminInstructorsPage() {
           <Button variant="light" disabled={page === meta.totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
         </div>
       )}
+
+      {/* Create Instructor Modal */}
+      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered>
+        <Modal.Header closeButton className="bg-light">
+          <Modal.Title className="fw-bold fs-5">Add New Instructor</Modal.Title>
+        </Modal.Header>
+        <Form onSubmit={handleCreateSubmit}>
+          <Modal.Body className="p-4">
+            <Form.Group className="mb-3">
+              <Form.Label className="small fw-bold">Full Name</Form.Label>
+              <Form.Control 
+                required 
+                placeholder="Enter name"
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="small fw-bold">Email Address</Form.Label>
+              <Form.Control 
+                type="email" 
+                required 
+                placeholder="name@example.com"
+                value={formData.email} 
+                onChange={(e) => setFormData({...formData, email: e.target.value})} 
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="small fw-bold">Phone Number</Form.Label>
+              <Form.Control 
+                placeholder="10-digit phone"
+                value={formData.phone} 
+                onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+              />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label className="small fw-bold">Password</Form.Label>
+              <Form.Control 
+                type="password"
+                required 
+                placeholder="Minimum 6 characters"
+                value={formData.password} 
+                onChange={(e) => setFormData({...formData, password: e.target.value})} 
+              />
+            </Form.Group>
+            {!isSchoolAdmin && (
+              <Form.Group className="mb-3">
+                <Form.Label className="small fw-bold">Assign to School</Form.Label>
+                <Form.Select 
+                  value={formData.schoolId} 
+                  onChange={(e) => setFormData({...formData, schoolId: e.target.value})}
+                >
+                  <option value="">No School (Independent)</option>
+                  {schools.map(s => <option key={s._id} value={s._id}>{s.schoolName}</option>)}
+                </Form.Select>
+              </Form.Group>
+            )}
+          </Modal.Body>
+          <Modal.Footer className="bg-light">
+            <Button variant="link" onClick={() => setShowCreateModal(false)} className="text-secondary text-decoration-none">Cancel</Button>
+            <Button variant="primary" type="submit" disabled={isCreating} className="px-5 shadow-sm">
+              {isCreating ? <Spinner size="sm" /> : 'Create Instructor'}
+            </Button>
+          </Modal.Footer>
+        </Form>
+      </Modal>
 
       {/* Stats & Courses Modal */}
       {selectedInstructor && (

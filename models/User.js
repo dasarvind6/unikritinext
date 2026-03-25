@@ -7,8 +7,13 @@ const userSchema = new mongoose.Schema({
   password: { type: String, select: false },
   role: { 
     type: String, 
-    enum: ['student', 'instructor', 'admin'], 
+    enum: ['student', 'instructor', 'admin', 'school_admin', 'parent', 'staff'], 
     default: 'student' 
+  },
+  schoolId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'School',
+    sparse: true
   },
   bio: { type: String, default: '' },
   avatar: { type: String, default: '' },
@@ -19,4 +24,5 @@ const userSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-export default mongoose.models.User || mongoose.model('User', userSchema);
+delete mongoose.models.User;
+export default mongoose.model('User', userSchema);

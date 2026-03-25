@@ -6,9 +6,11 @@ import {
   useGetAdminUsersQuery, 
   useUpdateAdminUserMutation, 
   useCreateAdminUserMutation,
-  useDeleteAdminUserMutation 
+  useDeleteAdminUserMutation,
+  useGetAdminSchoolsQuery
 } from '@/redux/api/apiSlice';
 import { FaEdit, FaTrash, FaPlus, FaCheckCircle } from 'react-icons/fa';
+import { useSelector } from 'react-redux';
 
 export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
@@ -22,6 +24,12 @@ export default function AdminUsersPage() {
     role: roleFilter
   });
   
+  const { data: schoolData } = useGetAdminSchoolsQuery();
+  const schools = schoolData?.schools || [];
+  
+  const { userInfo } = useSelector((state) => state.auth);
+  const isSchoolAdmin = userInfo?.role === 'school_admin';
+  
   const [updateUser, { isLoading: isUpdating }] = useUpdateAdminUserMutation();
   const [createUser, { isLoading: isCreating }] = useCreateAdminUserMutation();
   const [deleteUser, { isLoading: isDeleting }] = useDeleteAdminUserMutation();
@@ -30,7 +38,7 @@ export default function AdminUsersPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', role: 'student' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', role: 'student', schoolId: '' });
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleSearch = (e) => {
@@ -58,10 +66,10 @@ export default function AdminUsersPage() {
   const handleOpenModal = (user = null) => {
     if (user) {
       setEditingUser(user);
-      setFormData({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, password: '' });
+      setFormData({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, schoolId: user.schoolId || '', password: '' });
     } else {
       setEditingUser(null);
-      setFormData({ name: '', email: '', phone: '', password: '', role: 'student' });
+      setFormData({ name: '', email: '', phone: '', password: '', role: isSchoolAdmin ? 'instructor' : 'student', schoolId: '' });
     }
     setShowModal(true);
   };
@@ -131,19 +139,21 @@ export default function AdminUsersPage() {
           />
           <Button variant="secondary" type="submit">Search</Button>
         </Form>
-        <div className="d-flex align-items-center gap-2 ms-auto">
-          <span className="text-muted small fw-bold">Role:</span>
-          <Form.Select 
-            style={{ width: '150px' }}
-            value={roleFilter}
-            onChange={(e) => handleRoleChange(e.target.value)}
-          >
-            <option value="all">All Roles</option>
-            <option value="student">Student</option>
-            <option value="instructor">Instructor</option>
-            <option value="admin">Admin</option>
-          </Form.Select>
-        </div>
+        {!isSchoolAdmin && (
+          <div className="d-flex align-items-center gap-2 ms-auto">
+            <span className="text-muted small fw-bold">Role:</span>
+            <Form.Select 
+              style={{ width: '150px' }}
+              value={roleFilter}
+              onChange={(e) => handleRoleChange(e.target.value)}
+            >
+              <option value="all">All Roles</option>
+              <option value="student">Student</option>
+              <option value="instructor">Instructor</option>
+              <option value="admin">Admin</option>
+            </Form.Select>
+          </div>
+        )}
       </div>
 
       {successMsg && (
@@ -284,17 +294,34 @@ export default function AdminUsersPage() {
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
               />
             </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Role</Form.Label>
-              <Form.Select 
-                value={formData.role}
-                onChange={(e) => setFormData({...formData, role: e.target.value})}
-              >
-                <option value="student">Student</option>
-                <option value="instructor">Instructor</option>
-                <option value="admin">Admin</option>
-              </Form.Select>
-            </Form.Group>
+            {!isSchoolAdmin && (
+              <Form.Group className="mb-3">
+                <Form.Label>Role</Form.Label>
+                <Form.Select 
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                >
+                  <option value="student">Student</option>
+                  <option value="instructor">Instructor</option>
+                  <option value="admin">Admin</option>
+                  <option value="school_admin">School Admin</option>
+                </Form.Select>
+              </Form.Group>
+            )}
+            
+            {!isSchoolAdmin && formData.role === 'school_admin' && (
+              <Form.Group className="mb-3">
+                <Form.Label>Assign School (Required for School Admin)</Form.Label>
+                <Form.Select 
+                  required
+                  value={formData.schoolId}
+                  onChange={(e) => setFormData({...formData, schoolId: e.target.value})}
+                >
+                  <option value="">Select School</option>
+                  {schools.map(s => <option key={s._id} value={s._id}>{s.schoolName}</option>)}
+                </Form.Select>
+              </Form.Group>
+            )}
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={handleCloseModal}>Cancel</Button>

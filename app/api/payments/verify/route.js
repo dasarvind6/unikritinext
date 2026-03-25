@@ -43,7 +43,10 @@ export async function POST(req) {
       // Create Enrollment
       await Enrollment.create({
         userId: paymentRecord.userId,
-        courseId: paymentRecord.courseId
+        courseId: paymentRecord.courseId,
+        batchId: paymentRecord.batchId,
+        packageId: paymentRecord.packageId,
+        paymentId: paymentRecord._id
       });
 
       return NextResponse.json({ success: true, message: 'Payment verified successfully' });

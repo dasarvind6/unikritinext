@@ -6,7 +6,7 @@ import { getUserFromCookie } from '@/utils/auth';
 export async function GET(req) {
   try {
     const user = getUserFromCookie();
-    if (!user || user.role !== 'admin') {
+    if (!user || (!['admin', 'school_admin'].includes(user.role))) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -18,18 +18,27 @@ export async function GET(req) {
 
     await connectDB();
 
-    // Query for users with role 'instructor' OR status 'pending_approval'
-    const query = { 
+    // Base query for instructors
+    const baseQuery = {
       $or: [
         { role: 'instructor' },
         { status: 'pending_approval' }
       ]
     };
+
+    if (user.role === 'school_admin') {
+      baseQuery.schoolId = user.schoolId;
+    }
+
+    const query = { $and: [baseQuery] };
+
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ];
+      query.$and.push({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ]
+      });
     }
 
     const totalDocs = await User.countDocuments(query);

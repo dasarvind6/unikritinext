@@ -30,7 +30,11 @@ export async function POST(req) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, slug, icon, image, parentId } = await req.json();
+    const { 
+      name, slug, icon, image, parentId,
+      description, shortDescription, highlights, faq,
+      metaTitle, metaDescription, metaKeywords
+    } = await req.json();
     console.log('Category POST Request:', { name, parentId });
 
     await connectDB();
@@ -44,7 +48,14 @@ export async function POST(req) {
       slug,
       icon,
       image,
-      parentId: castedParentId
+      parentId: castedParentId,
+      description,
+      shortDescription,
+      highlights,
+      faq,
+      metaTitle,
+      metaDescription,
+      metaKeywords
     });
 
     return NextResponse.json({ success: true, data: category });
@@ -61,7 +72,11 @@ export async function PUT(req) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id, name, slug, icon, image, parentId } = await req.json();
+    const { 
+      id, name, slug, icon, image, parentId,
+      description, shortDescription, highlights, faq,
+      metaTitle, metaDescription, metaKeywords
+    } = await req.json();
     console.log('Category PUT Request:', { id, name, parentId });
 
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
@@ -79,6 +94,13 @@ export async function PUT(req) {
     category.slug = slug;
     category.icon = icon;
     category.image = image;
+    category.description = description;
+    category.shortDescription = shortDescription;
+    category.highlights = highlights;
+    category.faq = faq;
+    category.metaTitle = metaTitle;
+    category.metaDescription = metaDescription;
+    category.metaKeywords = metaKeywords;
     
     category.parentId = parentId && mongoose.Types.ObjectId.isValid(parentId)
       ? new mongoose.Types.ObjectId(parentId)

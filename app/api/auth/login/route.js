@@ -18,8 +18,8 @@ export async function POST(req) {
       return NextResponse.json({ success: false, error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Admins and instructors must have elevated roles
-    if (user.role !== 'admin' && user.role !== 'instructor') {
+    // Admins, school admins, and instructors must have elevated roles
+    if (!['admin', 'school_admin', 'instructor'].includes(user.role)) {
       return NextResponse.json({ success: false, error: 'Access denied for student roles via email logic' }, { status: 403 });
     }
 
@@ -29,8 +29,13 @@ export async function POST(req) {
     }
 
     // Generate JWT
+    const jwtPayload = { id: user._id, role: user.role };
+    if (user.schoolId) {
+      jwtPayload.schoolId = user.schoolId;
+    }
+
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      jwtPayload,
       process.env.JWT_SECRET || 'fallback_secret_for_dev_only',
       { expiresIn: '7d' }
     );

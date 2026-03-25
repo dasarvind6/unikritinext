@@ -4,7 +4,10 @@ import axiosBaseQuery from '@/utils/axiosBaseQuery';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: axiosBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['User', 'Course', 'Lesson', 'Enrollment', 'Quiz', 'Assignment', 'Review', 'Coupon', 'Category', 'Banner', 'Section', 'Page'],
+  tagTypes: [
+    'User', 'Course', 'Lesson', 'Enrollment', 'Quiz', 'Assignment', 'Review', 'Coupon', 'Category', 'Banner', 'Section', 'Page', 'School', 'Student', 'StudentParent', 'Batch', 'BatchStudent', 'Instrument', 'Level', 'Timetable', 'ClassSession', 'Attendance',
+    'BatchCourse', 'ClassProgress', 'StudentProgress', 'Package'
+  ],
   endpoints: (builder) => ({
     // Shared endpoints can go here, expanded later
     checkHealth: builder.query({
@@ -105,6 +108,10 @@ export const apiSlice = createApi({
     getAdminDashboardStats: builder.query({
       query: () => ({ url: '/admin/dashboard' }),
       providesTags: ['User', 'Course', 'Enrollment', 'Payment'],
+    }),
+    getSchoolAdminDashboardStats: builder.query({
+      query: () => ({ url: '/admin/dashboard/school' }),
+      providesTags: ['Student', 'User', 'Batch', 'Timetable'],
     }),
     adminLogout: builder.mutation({
       query: () => ({ url: '/auth/logout', method: 'POST' }),
@@ -360,6 +367,239 @@ export const apiSlice = createApi({
       query: () => ({ url: '/settings', method: 'GET' }),
       providesTags: ['Setting'],
     }),
+    getAdminSchools: builder.query({
+      query: (params) => ({ url: '/admin/schools', method: 'GET', params }),
+      providesTags: ['School'],
+    }),
+    createAdminSchool: builder.mutation({
+      query: (data) => ({ url: '/admin/schools', method: 'POST', data }),
+      invalidatesTags: ['School'],
+    }),
+    updateAdminSchool: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `/admin/schools/${id}`, method: 'PUT', data }),
+      invalidatesTags: ['School'],
+    }),
+    deleteAdminSchool: builder.mutation({
+      query: (id) => ({ url: `/admin/schools/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['School'],
+    }),
+
+    // ── Student CRM ──────────────────────────────────────────────────────
+    getAdminStudents: builder.query({
+      query: (params) => ({ url: '/admin/students', method: 'GET', params }),
+      providesTags: ['Student'],
+    }),
+    getAdminStudentById: builder.query({
+      query: (id) => ({ url: `/admin/students/${id}`, method: 'GET' }),
+      providesTags: ['Student'],
+    }),
+    createAdminStudent: builder.mutation({
+      query: (data) => ({ url: '/admin/students', method: 'POST', data }),
+      invalidatesTags: ['Student', 'User'],
+    }),
+    updateAdminStudent: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `/admin/students/${id}`, method: 'PUT', data }),
+      invalidatesTags: ['Student'],
+    }),
+    deleteAdminStudent: builder.mutation({
+      query: (id) => ({ url: `/admin/students/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Student', 'User'],
+    }),
+    getAdminStudentParents: builder.query({
+      query: (id) => ({ url: `/admin/students/${id}/parents`, method: 'GET' }),
+      providesTags: ['StudentParent'],
+    }),
+    createAdminStudentParent: builder.mutation({
+      query: ({ studentId, ...data }) => ({ url: `/admin/students/${studentId}/parents`, method: 'POST', data }),
+      invalidatesTags: ['StudentParent'],
+    }),
+
+    // ── Batch & Enrollment ───────────────────────────────────────────────
+    getAdminBatches: builder.query({
+      query: (params) => ({ url: '/admin/batches', method: 'GET', params }),
+      providesTags: ['Batch'],
+    }),
+    getAdminBatchById: builder.query({
+      query: (id) => ({ url: `/admin/batches/${id}`, method: 'GET' }),
+      providesTags: ['Batch'],
+    }),
+    createAdminBatch: builder.mutation({
+      query: (data) => ({ url: '/admin/batches', method: 'POST', data }),
+      invalidatesTags: ['Batch'],
+    }),
+    updateAdminBatch: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `/admin/batches/${id}`, method: 'PUT', data }),
+      invalidatesTags: ['Batch'],
+    }),
+    deleteAdminBatch: builder.mutation({
+      query: (id) => ({ url: `/admin/batches/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Batch'],
+    }),
+    getAdminBatchStudents: builder.query({
+      query: (id) => ({ url: `/admin/batches/${id}/students`, method: 'GET' }),
+      providesTags: ['BatchStudent'],
+    }),
+    enrollStudentInBatch: builder.mutation({
+      query: ({ batchId, ...data }) => ({ url: `/admin/batches/${batchId}/students`, method: 'POST', data }),
+      invalidatesTags: ['BatchStudent', 'Batch'],
+    }),
+    removeStudentFromBatch: builder.mutation({
+      query: ({ batchId, studentId }) => ({ url: `/admin/batches/${batchId}/students/${studentId}`, method: 'DELETE' }),
+      invalidatesTags: ['BatchStudent', 'Batch'],
+    }),
+    // ── Instrumental & Levels ─────────────────────────────────────────────
+    getAdminInstruments: builder.query({
+      query: (params) => ({ url: '/admin/instruments', method: 'GET', params }),
+      providesTags: ['Instrument'],
+    }),
+    createAdminInstrument: builder.mutation({
+      query: (data) => ({ url: '/admin/instruments', method: 'POST', data }),
+      invalidatesTags: ['Instrument'],
+    }),
+    updateAdminInstrument: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `/admin/instruments/${id}`, method: 'PUT', data }),
+      invalidatesTags: ['Instrument'],
+    }),
+    deleteAdminInstrument: builder.mutation({
+      query: (id) => ({ url: `/admin/instruments/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Instrument'],
+    }),
+    getAdminLevels: builder.query({
+      query: (params) => ({ url: '/admin/levels', method: 'GET', params }),
+      providesTags: ['Level'],
+    }),
+    createAdminLevel: builder.mutation({
+      query: (data) => ({ url: '/admin/levels', method: 'POST', data }),
+      invalidatesTags: ['Level'],
+    }),
+    updateAdminLevel: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `/admin/levels/${id}`, method: 'PUT', data }),
+      invalidatesTags: ['Level'],
+    }),
+    deleteAdminLevel: builder.mutation({
+      query: (id) => ({ url: `/admin/levels/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Level'],
+    }),
+
+    // Timetable Endpoints
+    getAdminTimetables: builder.query({
+      query: (params) => {
+        let queryString = '';
+        if (params) {
+          const searchParams = new URLSearchParams();
+          if (params.schoolId) searchParams.append('schoolId', params.schoolId);
+          if (params.teacherId) searchParams.append('teacherId', params.teacherId);
+          if (params.batchId) searchParams.append('batchId', params.batchId);
+          if (params.dayOfWeek) searchParams.append('dayOfWeek', params.dayOfWeek);
+          if (params.status) searchParams.append('status', params.status);
+          const str = searchParams.toString();
+          if (str) queryString = `?${str}`;
+        }
+        return { url: `/admin/timetable${queryString}` };
+      },
+      providesTags: ['Timetable'],
+    }),
+    createAdminTimetable: builder.mutation({
+      query: (timetableData) => ({
+        url: '/admin/timetable',
+        method: 'POST',
+        data: timetableData,
+      }),
+      invalidatesTags: ['Timetable'],
+    }),
+    updateAdminTimetable: builder.mutation({
+      query: ({ id, ...timetableData }) => ({
+        url: `/admin/timetable/${id}`,
+        method: 'PUT',
+        data: timetableData,
+      }),
+      invalidatesTags: ['Timetable'],
+    }),
+    deleteAdminTimetable: builder.mutation({
+      query: (id) => ({
+        url: `/admin/timetable/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Timetable'],
+    }),
+    
+    // ── Attendance & Sessions ───────────────────────────────────────────
+    getAdminClassSessions: builder.query({
+      query: (params) => ({ url: '/admin/class-sessions', method: 'GET', params }),
+      providesTags: ['ClassSession'],
+    }),
+    createAdminClassSession: builder.mutation({
+      query: (data) => ({ url: '/admin/class-sessions', method: 'POST', data }),
+      invalidatesTags: ['ClassSession'],
+    }),
+    getAdminAttendance: builder.query({
+      query: (params) => ({ url: '/admin/attendance', method: 'GET', params }),
+      providesTags: ['Attendance'],
+    }),
+    getAttendanceReport: builder.query({
+      query: (params) => ({
+        url: '/admin/attendance/report',
+        params,
+      }),
+      providesTags: ['Attendance'],
+    }),
+
+    // --- LMS / Batch Progress ---
+    getBatchCourse: builder.query({
+      query: (batchId) => `/admin/batches/${batchId}/course`,
+      providesTags: ['BatchCourse'],
+    }),
+    assignBatchCourse: builder.mutation({
+      query: ({ batchId, courseId }) => ({
+        url: `/admin/batches/${batchId}/course`,
+        method: 'POST',
+        body: { courseId },
+      }),
+      invalidatesTags: ['BatchCourse'],
+    }),
+    getClassSessionNextLesson: builder.query({
+      query: (sessionId) => `/admin/class-sessions/${sessionId}/lesson`,
+      providesTags: ['ClassProgress'],
+    }),
+    completeClassLesson: builder.mutation({
+      query: (data) => ({
+        url: '/admin/class-sessions/complete-lesson',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: ['ClassProgress', 'StudentProgress'],
+    }),
+    getStudentLmsProgress: builder.query({
+      query: () => '/student/progress',
+      providesTags: ['StudentProgress'],
+    }),
+    markAttendance: builder.mutation({
+      query: (data) => ({ url: '/admin/attendance', method: 'POST', data }),
+      invalidatesTags: ['Attendance', 'ClassSession'],
+    }),
+
+    // ── Package CRUD ──────────────────────────────────────────────────────
+    getAdminPackages: builder.query({
+      query: (params) => ({ url: '/admin/packages', method: 'GET', params }),
+      providesTags: ['Package'],
+    }),
+    createAdminPackage: builder.mutation({
+      query: (data) => ({ url: '/admin/packages', method: 'POST', data }),
+      invalidatesTags: ['Package'],
+    }),
+    updateAdminPackage: builder.mutation({
+      query: ({ id, ...data }) => ({ url: `/admin/packages/${id}`, method: 'PUT', data }),
+      invalidatesTags: ['Package'],
+    }),
+    deleteAdminPackage: builder.mutation({
+      query: (id) => ({ url: `/admin/packages/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Package'],
+    }),
+
+    getPackages: builder.query({
+      query: (params) => ({ url: '/packages', method: 'GET', params }),
+      providesTags: ['Package'],
+    }),
   }),
 });
 
@@ -379,6 +619,7 @@ export const {
   useGetInstructorStatsQuery,
   useGetInstructorCoursesQuery,
   useGetAdminDashboardStatsQuery,
+  useGetSchoolAdminDashboardStatsQuery,
   useAdminLogoutMutation,
   useGetAdminCategoriesQuery,
   useCreateAdminCategoryMutation,
@@ -420,4 +661,62 @@ export const {
   useUpdateAdminPageMutation,
   useDeleteAdminPageMutation,
   useGetPublicPageQuery,
+
+  useGetAdminSchoolsQuery,
+  useCreateAdminSchoolMutation,
+  useUpdateAdminSchoolMutation,
+  useDeleteAdminSchoolMutation,
+
+  // Student CRM
+  useGetAdminStudentsQuery,
+  useGetAdminStudentByIdQuery,
+  useCreateAdminStudentMutation,
+  useUpdateAdminStudentMutation,
+  useDeleteAdminStudentMutation,
+  useGetAdminStudentParentsQuery,
+  useCreateAdminStudentParentMutation,
+
+  // Batch & Enrollment
+  useGetAdminBatchesQuery,
+  useGetAdminBatchByIdQuery,
+  useCreateAdminBatchMutation,
+  useUpdateAdminBatchMutation,
+  useDeleteAdminBatchMutation,
+  useGetAdminBatchStudentsQuery,
+  useEnrollStudentInBatchMutation,
+  useRemoveStudentFromBatchMutation,
+
+  useGetAdminInstrumentsQuery,
+  useCreateAdminInstrumentMutation,
+  useUpdateAdminInstrumentMutation,
+  useDeleteAdminInstrumentMutation,
+  useGetAdminLevelsQuery,
+  useCreateAdminLevelMutation,
+  useUpdateAdminLevelMutation,
+  useDeleteAdminLevelMutation,
+  useGetAdminTimetablesQuery,
+  useCreateAdminTimetableMutation,
+  useUpdateAdminTimetableMutation,
+  useDeleteAdminTimetableMutation,
+
+  // Attendance & Sessions
+  useGetAdminClassSessionsQuery,
+  useCreateAdminClassSessionMutation,
+  useGetAdminAttendanceQuery,
+  useGetAttendanceReportQuery,
+  useMarkAttendanceMutation,
+
+  // LMS + Batch Integration
+  useGetBatchCourseQuery,
+  useAssignBatchCourseMutation,
+  useGetClassSessionNextLessonQuery,
+  useCompleteClassLessonMutation,
+  useGetStudentLmsProgressQuery,
+
+  // Package CRUD
+  useGetAdminPackagesQuery,
+  useCreateAdminPackageMutation,
+  useUpdateAdminPackageMutation,
+  useDeleteAdminPackageMutation,
+  useGetPackagesQuery,
 } = apiSlice;

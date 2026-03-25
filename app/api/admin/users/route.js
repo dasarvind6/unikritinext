@@ -6,7 +6,7 @@ import { getUserFromCookie } from '@/utils/auth';
 export async function GET(req) {
   try {
     const user = getUserFromCookie();
-    if (!user || user.role !== 'admin') {
+    if (!user || (!['admin', 'school_admin'].includes(user.role))) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -27,8 +27,14 @@ export async function GET(req) {
         { email: { $regex: search, $options: 'i' } }
       ];
     }
-    if (role !== 'all') {
-      query.role = role;
+    
+    if (user.role === 'school_admin') {
+      query.schoolId = user.schoolId;
+      query.role = 'instructor'; // School admins can only see instructors
+    } else {
+      if (role !== 'all') {
+        query.role = role;
+      }
     }
 
     const totalUsers = await User.countDocuments(query);
@@ -57,11 +63,11 @@ import bcrypt from 'bcryptjs';
 export async function POST(req) {
   try {
     const user = getUserFromCookie();
-    if (!user || user.role !== 'admin') {
+    if (!user || (!['admin', 'school_admin'].includes(user.role))) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, email, phone, password, role } = await req.json();
+    const { name, email, phone, password, role, schoolId } = await req.json();
 
     if (!password) {
       return NextResponse.json({ success: false, error: 'Password is required' }, { status: 400 });
@@ -84,13 +90,29 @@ export async function POST(req) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
+    let finalRole = role;
+    let finalSchoolId = null;
+
+    if (user.role === 'school_admin') {
+      finalRole = 'instructor';
+      finalSchoolId = user.schoolId;
+    } else if (user.role === 'admin' && role === 'school_admin' && schoolId) {
+      finalSchoolId = schoolId;
+    }
+
+    const newUserData = {
       name,
       email,
       phone,
       password: hashedPassword,
-      role
-    });
+      role: finalRole
+    };
+    
+    if (finalSchoolId) {
+       newUserData.schoolId = finalSchoolId;
+    }
+
+    const newUser = await User.create(newUserData);
 
     return NextResponse.json({ success: true, data: newUser });
   } catch (error) {

@@ -1,36 +1,69 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Container, Row, Col, Nav, Offcanvas } from 'react-bootstrap';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import AdminNavbar from '@/components/AdminNavbar';
-import { FiUsers, FiLayers, FiCreditCard, FiSliders, FiHome, FiUserCheck, FiBox, FiImage, FiSettings, FiBarChart2, FiList, FiFileText } from 'react-icons/fi';
+import { useSelector } from 'react-redux';
+import { FiUsers, FiLayers, FiCreditCard, FiSliders, FiHome, FiUserCheck, FiBox, FiImage, FiSettings, FiBarChart2, FiList, FiFileText, FiMusic, FiLink } from 'react-icons/fi';
+import { FaCalendarAlt } from 'react-icons/fa';
 
 export default function AdminLayout({ children }) {
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  const { user } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const pathname = usePathname();
+  const isSchoolAdmin = pathname?.startsWith('/school');
 
   const handleSidebarToggle = () => setShowSidebar(!showSidebar);
 
-  const sidebarLinks = [
-    { name: 'Dashboard', href: '/admin/dashboard', icon: <FiHome /> },
-    { name: 'Users', href: '/admin/users', icon: <FiUsers /> },
-    { name: 'Instructors', href: '/admin/instructors', icon: <FiUserCheck /> },
-    { name: 'Courses', href: '/admin/courses', icon: <FiLayers /> },
-    { name: 'Categories', href: '/admin/categories', icon: <FiBox /> },
-    { name: 'Menus', href: '/admin/menus', icon: <FiList /> },
-    { name: 'Banners', href: '/admin/banners', icon: <FiImage /> },
-    { name: 'Pages', href: '/admin/pages', icon: <FiFileText /> },
-    { name: 'Payments', href: '/admin/payments', icon: <FiCreditCard /> },
-    { name: 'Settings', href: '/admin/settings', icon: <FiSettings /> },
-    { name: 'Analytics', href: '/admin/analytics', icon: <FiBarChart2 /> },
+  const basePath = isSchoolAdmin ? '/school' : '/admin';
+
+  const allSidebarLinks = [
+    { name: 'Dashboard', href: `${basePath}/dashboard`, icon: <FiHome /> },
+    { name: 'Users', href: `${basePath}/users`, icon: <FiUsers /> },
+    { name: 'Instructors', href: `${basePath}/instructors`, icon: <FiUserCheck /> },
+    { name: 'Schools', href: `${basePath}/schools`, icon: <FiUserCheck /> },
+    { name: 'Students', href: `${basePath}/students`, icon: <FiUserCheck /> },
+    { name: 'Batches', href: `${basePath}/batches`, icon: <FiUserCheck /> },
+    { name: 'Instruments', href: `${basePath}/instruments`, icon: <FiMusic /> },
+    { name: 'Timetable', href: `${basePath}/timetable`, icon: <FaCalendarAlt /> },
+    { name: 'Attendance', href: `${basePath}/attendance`, icon: <FaCalendarAlt /> },
+    { name: 'Courses', href: `${basePath}/courses`, icon: <FiLayers /> },
+    { name: 'Packages', href: `${basePath}/packages`, icon: <FiLayers /> },
+    { name: 'Categories', href: `${basePath}/categories`, icon: <FiBox /> },
+    { name: 'Menus', href: `${basePath}/menus`, icon: <FiList /> },
+    { name: 'Banners', href: `${basePath}/banners`, icon: <FiImage /> },
+    { name: 'Pages', href: `${basePath}/pages`, icon: <FiFileText /> },
+    { name: 'Gallery', href: `${basePath}/gallery`, icon: <FiImage /> },
+    { name: 'Payments', href: `${basePath}/payments`, icon: <FiCreditCard /> },
+    { name: 'Settings', href: `${basePath}/settings`, icon: <FiSettings /> },
+    { name: 'Analytics', href: `${basePath}/analytics`, icon: <FiBarChart2 /> },
   ];
+
+  const schoolAdminLinks = ['Dashboard', 'Instructors', 'Students', 'Batches', 'Timetable', 'Attendance', 'Course Mappings', 'Analytics', 'Settings'];
+  const sidebarLinks = allSidebarLinks.filter(link => {
+    if (isSchoolAdmin) {
+      return schoolAdminLinks.includes(link.name);
+    }
+    return link.name !== 'Schosols';
+  });
 
   const SidebarContent = () => (
     <>
-      <div className="p-4 border-bottom border-secondary d-flex align-items-center gap-2">
+      <div className="p-4 border-bottom border-secondary d-flex align-items-center gap-2 " >
         <div className="bg-primary rounded-1 p-1">
           <FiLayers className="text-white" size={20} />
         </div>
-        <h5 className="mb-0 fw-bold text-white tracking-tight">NextLMS</h5>
+        <h5 className="mb-0 fw-bold text-white tracking-tight">
+          {isSchoolAdmin ? 'School Portal' : 'NextLMS'}
+        </h5>
       </div>
       <Nav className="flex-column p-3">
         {sidebarLinks.map((link) => (
@@ -51,11 +84,11 @@ export default function AdminLayout({ children }) {
 
   return (
     <>
-      <div className="d-flex">
+      <div className="d-flex " >
         {/* Desktop Sidebar (Fixed) */}
         <div
-          className="bg-dark text-white min-vh-100 position-fixed d-none d-md-block shadow"
-          style={{ width: '250px', zIndex: 1000 }}
+          className="bg-dark text-white min-vh-100 position-fixed d-none d-md-block shadow overflow-auto"
+          style={{ width: '250px', zIndex: 1000, height: '100vh' }}
         >
           <SidebarContent />
         </div>
